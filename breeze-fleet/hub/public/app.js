@@ -1,13 +1,12 @@
 'use strict';
-// Dashboard client. Talks to the hub's human API. In SSO mode the session
-// cookie authorizes; in dev mode a ?token= in the URL is forwarded on each call.
-const SSO = document.documentElement.getAttribute('data-sso') === 'on';
+// Dashboard client. Talks to the hub's operator API. The shared token from
+// the URL (?token=…) is forwarded on each call.
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
 const q = sel => document.querySelector(sel);
 
 function api(path, opts = {}) {
   const sep = path.includes('?') ? '&' : '?';
-  const url = (!SSO && TOKEN) ? path + sep + 'token=' + encodeURIComponent(TOKEN) : path;
+  const url = TOKEN ? path + sep + 'token=' + encodeURIComponent(TOKEN) : path;
   return fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
 }
 function toast(msg, err) { const t = q('#toast'); t.textContent = msg; t.classList.toggle('err', !!err); t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 3800); }
@@ -17,11 +16,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 function showLogin() {
   q('#app').hidden = true; q('#auth').hidden = false;
-  q('#auth').innerHTML = SSO
-    ? `<h1>Breeze Fleet</h1><p>Sign in to review and approve staging database cleanups.</p>
-       <a class="ms" href="/auth/login"><i><b></b><b></b><b></b><b></b></i> Sign in with Microsoft</a>`
-    : `<h1>Breeze Fleet</h1><p>Dev mode — SSO is not configured.</p>
-       <p class="devnote">Open the dashboard with the <code>?token=…</code> the hub printed at startup. Configure <code>AZURE_*</code> + <code>SESSION_SECRET</code> to enable Microsoft sign-in.</p>`;
+  q('#auth').innerHTML = `<h1>Breeze Fleet</h1><p>Access required.</p>
+       <p class="devnote">Open the dashboard with the <code>?token=…</code> the hub printed at startup.</p>`;
 }
 
 async function approve(hostId, dbName, op, mode) {
@@ -92,7 +88,7 @@ async function load() {
   q('#reclaim').textContent = fmtBytes(reclaim);
   q('#hosts').innerHTML = hosts.length ? hosts.map(hostCard).join('') : '<div class="empty">No hosts have reported yet. Start an agent pointed at this hub.</div>';
   const me = await api('/api/me').then(x => x.ok ? x.json() : null).catch(() => null);
-  q('#who').innerHTML = me && me.user ? `${esc(me.user.name)}${me.user.dev ? '' : ` · <a href="/auth/logout">sign out</a>`}` : '';
+  q('#who').innerHTML = me && me.user ? esc(me.user.name) : '';
   const la = await api('/api/actions').then(x => x.json()).catch(() => ({ actions: [] }));
   q('#log').innerHTML = (la.actions || []).length ? la.actions.map(logRow).join('') : '<div class="empty">No actions yet.</div>';
 }

@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 'use strict';
-// Breeze Fleet CLI — a thin client for the hub's human API. Read-only views
+// Breeze Fleet CLI — a thin client for the hub's operator API. Read-only views
 // plus the ability to approve a cleanup (same guardrails as the dashboard, as
-// the hub enforces them). Auth: BREEZE_TOKEN (dev mode) or a session is not
-// available from the CLI, so SSO-protected hubs accept only the dev token path.
+// the hub enforces them). Auth: the shared hub token via BREEZE_TOKEN.
 const http = require('http');
 const https = require('https');
 
@@ -26,7 +25,7 @@ const pad = (s, n) => String(s).padEnd(n);
 
 async function hosts(jsonOut) {
   const r = await req('GET', '/api/hosts');
-  if (r.status === 401) { console.error('Unauthorized. Set BREEZE_TOKEN (dev mode). SSO-only hubs need the dashboard.'); process.exit(1); }
+  if (r.status === 401) { console.error('Unauthorized. Set BREEZE_TOKEN to the hub token.'); process.exit(1); }
   if (jsonOut) return console.log(JSON.stringify(r.json, null, 2));
   const hs = r.json.hosts || [];
   if (!hs.length) return console.log('No hosts have reported yet.');

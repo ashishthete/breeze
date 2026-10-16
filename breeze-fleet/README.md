@@ -2,7 +2,7 @@
 
 Fleet-wide cleanup of stale **PostgreSQL staging databases**. Agents run on your
 database hosts, scan on an interval, and **report** cleanup candidates to a
-central hub. A human reviews the fleet in a **Microsoft Entra SSO** dashboard and
+central hub. An operator reviews the fleet in a **token-protected** dashboard and
 **approves** individual cleanups; only then does the agent execute — **dry-run by
 default**, with staging-only guardrails.
 
@@ -10,10 +10,10 @@ Nothing is deleted automatically. Every destructive action requires an explicit,
 per-database human approval recorded on the hub.
 
 ```
- ┌────────────┐   report inventory    ┌──────────┐   approve (SSO)   ┌───────┐
- │  agent     │ ───────────────────▶  │   hub    │ ◀───────────────  │ human │
- │ (db host)  │ ◀─── approved action ─│ dashboard│                   │browser│
- │  psql      │ ──── result ────────▶ │  + store │                   └───────┘
+ ┌────────────┐   report inventory    ┌──────────┐   approve (token) ┌──────────┐
+ │  agent     │ ───────────────────▶  │   hub    │ ◀───────────────  │ operator │
+ │ (db host)  │ ◀─── approved action ─│ dashboard│                   │ browser  │
+ │  psql      │ ──── result ────────▶ │  + store │                   └──────────┘
  └────────────┘                       └──────────┘
 ```
 
@@ -34,7 +34,7 @@ on the agent at execution time (`lib/dbsafety.js`):
    is a plain identifier (so it can be safely quoted) — `postgres`, `template0/1`
    and `rdsadmin` are always protected;
 3. the database has **no active backends**;
-4. a human approved that specific database on the hub; and
+4. an operator approved that specific database on the hub; and
 5. the approval says `apply` **and** the agent was started with apply enabled.
 
 Absent any of these it is a no-op (or a dry-run that only prints the SQL).
@@ -48,24 +48,23 @@ Absent any of these it is a no-op (or a dry-run that only prints the SQL).
 ## Run the hub
 
 ```bash
-# dev mode (token-only; prints a dashboard URL with ?token=…)
-npm run hub
+npm run hub            # prints the dashboard URL with ?token=…
+```
 
-# production: enable Microsoft Entra SSO
-cp .env.example .env   # fill AZURE_* + SESSION_SECRET, then export them
+Optionally set `BREEZE_TOKEN`, `BREEZE_HUB_BIND` and `BREEZE_HUB_PORT` first
+(see `.env.example`):
+
+```bash
+cp .env.example .env
 set -a; . ./.env; set +a
 npm run hub
 ```
 
-The hub stores state in `~/.breeze-fleet/` and prints the enrollment token.
-
-### Microsoft Entra app registration
-
-Register a Web app, set the redirect URI to `AZURE_REDIRECT_URI`
-(`…/auth/callback`), add a client secret, and grant the delegated `openid`,
-`profile`, `email` scopes. The hub verifies the `id_token` signature against the
-tenant JWKS and checks issuer/audience/expiry. Set `AZURE_ALLOWED_GROUP` to also
-require group membership.
+The hub stores state in `~/.breeze-fleet/`, auto-generates a shared token (unless
+`BREEZE_TOKEN` is set), and prints it. Agents authenticate with that token, and
+operators open the dashboard at `/?token=<token>`. The hub binds to `127.0.0.1`
+by default — keep it on a trusted network or VPN, or front it with a reverse
+proxy that adds your own authentication.
 
 ## Run an agent (on each DB host)
 
@@ -82,7 +81,7 @@ in the config `pg` block or via standard `PG*` environment variables.
 ## CLI client
 
 ```bash
-export BREEZE_HUB=http://127.0.0.1:47700 BREEZE_TOKEN=…   # dev-mode auth
+export BREEZE_HUB=http://127.0.0.1:47700 BREEZE_TOKEN=…   # shared hub token
 node cli/breeze-fleet.js hosts
 node cli/breeze-fleet.js candidates
 node cli/breeze-fleet.js approve <hostId> <db> drop dry
@@ -115,7 +114,6 @@ lib/dbsafety.js     staging allow/protect gate (the only thing that authorizes a
 lib/pg.js           psql wrapper: inventory + validated DROP / VACUUM
 lib/candidates.js   idle/candidate scoring from reported history
 hub/hub.js          collector, approval workflow, dashboard server
-hub/auth.js         Microsoft Entra OAuth + session cookies
 hub/public/         browser dashboard
 agent/agent.js      host agent: report + execute approved actions
 cli/breeze-fleet.js CLI client for the hub

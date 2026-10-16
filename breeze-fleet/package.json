@@ -2,7 +2,7 @@
   "name": "breeze-fleet",
   "version": "0.1.0",
   "private": true,
-  "description": "Fleet-wide cleanup of stale PostgreSQL staging databases: host agents report candidates, humans approve in an Entra-SSO dashboard, agents execute (dry-run by default).",
+  "description": "Fleet-wide cleanup of stale PostgreSQL staging databases: host agents report candidates, operators approve in a token-protected dashboard, agents execute (dry-run by default).",
   "bin": {
     "breeze-fleet": "cli/breeze-fleet.js",
     "breeze-fleet-agent": "agent/agent.js"

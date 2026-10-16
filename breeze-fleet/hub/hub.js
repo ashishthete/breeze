@@ -3,9 +3,9 @@
 //
 //  * Agents (token-authenticated) POST inventory reports and poll for and
 //    report back on approved cleanup actions.
-//  * Humans (Entra SSO, or dev token when SSO is unconfigured) view the fleet
-//    dashboard and APPROVE individual cleanup actions. Nothing destructive
-//    happens without an explicit per-database human approval recorded here.
+//  * Operators (token-authenticated) view the fleet dashboard and APPROVE
+//    individual cleanup actions. Nothing destructive happens without an
+//    explicit per-database human approval recorded here.
 //
 // Pure Node, no external deps. State persists to ~/.breeze-fleet/.
 const http = require('http');
@@ -14,7 +14,6 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const auth = require('./auth');
 const { score, appendHistory } = require('../lib/candidates');
 
 const RUNDIR = path.join(os.homedir(), '.breeze-fleet');
@@ -80,10 +79,11 @@ function readBody(req) {
 }
 const agentAuthed = req => (req.headers['x-breeze-token'] || '') === TOKEN;
 
-// Human auth: real SSO session when configured, else dev token in the query.
+// Operator auth: the shared token, passed as ?token= in the URL or an
+// X-Breeze-Token header. Keep the hub bound to a trusted network/VPN.
 function humanUser(req, url) {
-  if (auth.isConfigured()) return auth.readSession(req.headers.cookie);
-  return (url.searchParams.get('token') === TOKEN) ? { name: 'dev (SSO off)', email: '', dev: true } : null;
+  const t = url.searchParams.get('token') || req.headers['x-breeze-token'] || '';
+  return t === TOKEN ? { name: 'operator', email: '' } : null;
 }
 
 const STATIC = { '/': ['index.html', 'text/html'], '/index.html': ['index.html', 'text/html'],
@@ -94,23 +94,9 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
 
-    // ---- SSO endpoints ----
-    if (p === '/auth/login') {
-      if (!auth.isConfigured()) return send(res, 400, 'SSO not configured (dev mode). Append ?token=… to the URL.', 'text/plain');
-      return send(res, 302, '', 'text/plain', { Location: auth.authorizeUrl() });
-    }
-    if (p === '/auth/callback') {
-      try {
-        const user = await auth.handleCallback(url.searchParams.get('code'), url.searchParams.get('state'));
-        return send(res, 302, '', 'text/plain', { Location: '/', 'Set-Cookie': auth.cookie(auth.createSession(user), 28800) });
-      } catch (e) { return send(res, 403, 'Sign-in failed: ' + e.message, 'text/plain'); }
-    }
-    if (p === '/auth/logout') { auth.destroySession(req.headers.cookie); return send(res, 302, '', 'text/plain', { Location: '/', 'Set-Cookie': auth.cookie('', 0) }); }
-
     // ---- static dashboard ----
     if (req.method === 'GET' && STATIC[p]) {
-      let body = fs.readFileSync(path.join(PUBLIC, STATIC[p][0]), 'utf8');
-      if (STATIC[p][0] === 'index.html') body = body.replace('__SSO__', auth.isConfigured() ? 'on' : 'off');
+      const body = fs.readFileSync(path.join(PUBLIC, STATIC[p][0]), 'utf8');
       return send(res, 200, body, STATIC[p][1]);
     }
 
@@ -131,13 +117,13 @@ const server = http.createServer(async (req, res) => {
       return send(res, 404, { error: 'not found' });
     }
 
-    // ---- human API (SSO / dev token) ----
+    // ---- operator API (token) ----
     if (p.startsWith('/api/')) {
       const user = humanUser(req, url);
-      if (!user) return send(res, 401, { error: 'login required', ssoConfigured: auth.isConfigured() });
+      if (!user) return send(res, 401, { error: 'login required' });
       if (req.method === 'GET' && p === '/api/me') return send(res, 200, { user });
       if (req.method === 'GET' && p === '/api/hosts')
-        return send(res, 200, { now: Date.now(), ssoConfigured: auth.isConfigured(), hosts: Object.values(state.hosts).map(hostView).sort((a, b) => (a.name || '').localeCompare(b.name || '')) });
+        return send(res, 200, { now: Date.now(), hosts: Object.values(state.hosts).map(hostView).sort((a, b) => (a.name || '').localeCompare(b.name || '')) });
       if (req.method === 'GET' && p === '/api/actions')
         return send(res, 200, { actions: state.actions.slice(-200).reverse() });
       if (req.method === 'POST' && p === '/api/approve') {
@@ -169,8 +155,7 @@ function start(port = Number(process.env.BREEZE_HUB_PORT) || 47700, bind = proce
   server.listen(port, bind, () => {
     const host = bind === '0.0.0.0' ? os.hostname() : '127.0.0.1';
     console.log(`\n  Breeze Fleet Hub  ·  ${bind}:${port}  ·  ${Object.keys(state.hosts).length} host(s) known`);
-    console.log(`  SSO: ${auth.isConfigured() ? 'Microsoft Entra (enabled)' : 'DEV MODE — token only (set AZURE_* + SESSION_SECRET to enable)'}`);
-    console.log(auth.isConfigured() ? `  Dashboard:  http://${host}:${port}/` : `  Dashboard:  http://${host}:${port}/?token=${TOKEN}`);
+    console.log(`  Dashboard:  http://${host}:${port}/?token=${TOKEN}`);
     console.log(`  Enroll an agent:\n    BREEZE_TOKEN=${TOKEN} BREEZE_HUB=http://${host}:${port} node agent/agent.js --config agent.config.json\n`);
   });
 }
