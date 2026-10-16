@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
+  <title>Breeze Menu</title>
+  <style>
+    :root {
+      --bg: rgba(252,253,255,.82); --card: #fff; --card2: #f4f6fb; --border: #e6e9f0;
+      --fg: #1a1d24; --muted: #6b7180; --accent: #2e6be6; --good: #1f9d57; --warn: #c67a00; --danger: #e0443f;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: rgba(28,30,37,.80); --card: #23262e; --card2: #1c1f26; --border: #333843;
+        --fg: #eceef3; --muted: #9aa1b0; --accent: #5b9bff; --good: #44c17e; --warn: #e0a33a; --danger: #f0605b; }
+    }
+    * { box-sizing: border-box; margin: 0; }
+    html, body { background: transparent; }
+    body { font: 13px -apple-system, system-ui, sans-serif; color: var(--fg); padding: 8px; -webkit-user-select: none; cursor: default; }
+    .shell { background: var(--bg); backdrop-filter: blur(22px) saturate(1.3); -webkit-backdrop-filter: blur(22px) saturate(1.3);
+      border: 1px solid var(--border); border-radius: 16px; padding: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.28); }
+    .hd { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .hd .logo { color: var(--accent); display: flex; }
+    .hd b { font-size: 14px; }
+    .hd .sub { color: var(--muted); font-size: 11px; }
+    .hd .open { margin-left: auto; border: 1px solid var(--border); background: var(--card); color: var(--accent);
+      font-weight: 600; font-size: 12px; padding: 5px 11px; border-radius: 8px; cursor: pointer; }
+    .hd .open:hover { background: var(--card2); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; }
+    .card .lbl { font-size: 11px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    .card .val { font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -.02em; }
+    .card .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .card .foot { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .ring { --p: 0; width: 46px; height: 46px; border-radius: 50%;
+      background: conic-gradient(var(--rc, var(--accent)) calc(var(--p)*1%), var(--card2) 0); display: grid; place-items: center; }
+    .ring::after { content: ""; width: 34px; height: 34px; border-radius: 50%; background: var(--card); }
+    .ringwrap { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+    .ringwrap .big { font-size: 20px; font-weight: 700; }
+    .spark { display: flex; align-items: flex-end; gap: 2px; height: 26px; margin-top: 6px; }
+    .spark i { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; opacity: .85; }
+    .net { display: flex; gap: 14px; margin-top: 6px; }
+    .net div { font-size: 13px; font-weight: 700; }
+    .net span { font-size: 10px; color: var(--muted); font-weight: 600; }
+    .up { color: var(--warn); } .down { color: var(--good); }
+    .junk { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+    .junk .val { margin: 0; }
+    .junk .btn { margin-left: auto; border: none; border-radius: 9px; padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer; }
+    .junk .btn.scan { background: var(--card2); color: var(--fg); border: 1px solid var(--border); }
+    .junk .btn.clean { background: var(--accent); color: #fff; }
+    .junk .btn:disabled { opacity: .5; cursor: default; }
+    .batt { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+    .batt .bar { flex: 1; height: 7px; background: var(--card2); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+    .batt .bar i { display: block; height: 100%; background: var(--good); border-radius: 5px; transition: width .4s; }
+    .batt b { color: var(--fg); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .8s linear infinite; display: inline-block; }
+  </style>
+</head>
+<body>
+  <div class="shell" id="shell">
+    <div class="hd">
+      <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h11a3 3 0 1 0-3-3"/><path d="M3 17h15a3 3 0 1 1-3 3"/><path d="M3 7h5"/></svg></span>
+      <div><b>Breeze</b><div class="sub">Menu-bar monitor</div></div>
+      <button class="open" id="openMain">Open app</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <script src="tray.js"></script>
+</body>
+</html>

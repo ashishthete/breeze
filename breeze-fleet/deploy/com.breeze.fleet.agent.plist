@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS launchd unit for the Breeze Fleet agent.
+  Install: edit the paths below, then
+    sudo cp deploy/com.breeze.fleet.agent.plist /Library/LaunchDaemons/
+    sudo launchctl load -w /Library/LaunchDaemons/com.breeze.fleet.agent.plist
+  The agent loops internally; KeepAlive only restarts it if it crashes.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.breeze.fleet.agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/opt/breeze-fleet/agent/agent.js</string>
+    <string>--config</string>
+    <string>/opt/breeze-fleet/agent.config.json</string>
+    <!-- add <string>--apply</string> only when you want approved actions to actually execute -->
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StandardOutPath</key><string>/var/log/breeze-fleet-agent.log</string>
+  <key>StandardErrorPath</key><string>/var/log/breeze-fleet-agent.err.log</string>
+</dict>
+</plist>

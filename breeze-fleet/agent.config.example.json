@@ -1,0 +1,23 @@
+{
+  "hostName": "db-staging-1",
+  "env": "staging",
+  "hub": "http://127.0.0.1:47700",
+  "token": "PASTE_THE_HUB_ENROLLMENT_TOKEN",
+  "intervalSec": 300,
+  "apply": false,
+  "pg": {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "user": "postgres",
+    "password": "",
+    "adminDb": "postgres",
+    "sslmode": "prefer",
+    "connectTimeout": 8
+  },
+  "policy": {
+    "allow": ["^pr_", "^branch_", "^ci_", "^tmp_", "_staging$", "_stg$"],
+    "protect": ["prod", "production", "main", "master", "app"],
+    "idleDays": 7,
+    "minSizeMB": 1
+  }
+}

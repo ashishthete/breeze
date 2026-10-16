@@ -1,0 +1,27 @@
+# systemd unit for the Breeze Fleet agent (Linux).
+# Install: edit paths/User below, then
+#   sudo cp deploy/breeze-fleet-agent.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now breeze-fleet-agent
+[Unit]
+Description=Breeze Fleet agent (staging database cleanup reporter)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Run as an unprivileged user that can reach Postgres via psql (use ~/.pgpass for the password).
+User=breeze
+WorkingDirectory=/opt/breeze-fleet
+ExecStart=/usr/bin/node /opt/breeze-fleet/agent/agent.js --config /opt/breeze-fleet/agent.config.json
+# Append --apply to ExecStart only when approved actions should actually execute.
+Restart=on-failure
+RestartSec=10
+# Hardening: the agent needs psql + network, nothing else.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/opt/breeze-fleet
+
+[Install]
+WantedBy=multi-user.target

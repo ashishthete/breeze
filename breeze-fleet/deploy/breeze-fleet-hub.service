@@ -1,0 +1,27 @@
+# systemd unit for the Breeze Fleet hub (Linux).
+# Put secrets (AZURE_*, SESSION_SECRET, BREEZE_TOKEN, BREEZE_HUB_BIND/PORT) in
+# /etc/breeze-fleet/hub.env (chmod 600). Install:
+#   sudo cp deploy/breeze-fleet-hub.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now breeze-fleet-hub
+[Unit]
+Description=Breeze Fleet hub (collector + Entra-SSO approval dashboard)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=breeze
+WorkingDirectory=/opt/breeze-fleet
+EnvironmentFile=/etc/breeze-fleet/hub.env
+ExecStart=/usr/bin/node /opt/breeze-fleet/hub/hub.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+# hub state lives in ~/.breeze-fleet for the service user
+ReadWritePaths=/opt/breeze-fleet /home/breeze/.breeze-fleet
+
+[Install]
+WantedBy=multi-user.target

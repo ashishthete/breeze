@@ -1,0 +1,59 @@
+{
+  "name": "breeze-cleaner",
+  "version": "1.0.0",
+  "description": "A real macOS disk cleanup app. Scans safe-to-remove junk, large files, duplicates, app leftovers and photos, and removes them to the Trash (reversible).",
+  "main": "main.js",
+  "author": "Breeze",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "31.7.6",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.breeze.cleaner",
+    "productName": "Breeze Cleaner",
+    "copyright": "Copyright © 2026 Breeze",
+    "afterPack": "build/afterPack.js",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "build/trayTemplate.png",
+      "build/trayTemplate@2x.png"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": "arm64" },
+        { "target": "zip", "arch": "arm64" }
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns",
+      "identity": null,
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSDesktopFolderUsageDescription": "Breeze scans your Desktop for large files, screenshots and photos to clean.",
+        "NSDownloadsFolderUsageDescription": "Breeze scans your Downloads for large files, duplicates and photos to clean.",
+        "NSDocumentsFolderUsageDescription": "Breeze scans your Documents for duplicate and similar photos.",
+        "NSPhotoLibraryUsageDescription": "Breeze finds duplicate and similar photos in your photo folders.",
+        "NSAppleEventsUsageDescription": "Breeze reads your login items to list startup apps."
+      }
+    },
+    "dmg": {
+      "title": "Breeze Cleaner",
+      "contents": [
+        { "x": 140, "y": 180 },
+        { "x": 400, "y": 180, "type": "link", "path": "/Applications" }
+      ]
+    }
+  }
+}

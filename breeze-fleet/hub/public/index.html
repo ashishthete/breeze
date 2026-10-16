@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" data-sso="__SSO__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breeze Fleet</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark"></span> Breeze Fleet <small>staging database cleanup</small></div>
+  <div class="who" id="who"></div>
+</header>
+<div id="auth" class="auth" hidden></div>
+<main id="app" hidden>
+  <section class="bar">
+    <div class="stat"><b id="hostCount">0</b><span>hosts</span></div>
+    <div class="stat"><b id="candCount">0</b><span>drop candidates</span></div>
+    <div class="stat"><b id="reclaim">0</b><span>reclaimable</span></div>
+    <div class="spacer"></div>
+    <label class="chk"><input type="checkbox" id="autorefresh" checked> auto-refresh</label>
+    <button id="refresh" class="btn">Refresh</button>
+  </section>
+  <div id="hosts" class="hosts"></div>
+  <section class="actions">
+    <h2>Recent actions</h2>
+    <div id="log" class="log"></div>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>
