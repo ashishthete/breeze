@@ -6,7 +6,7 @@ in this repo:
 | App | Platform | What it cleans | How it stays safe |
 |-----|----------|----------------|-------------------|
 | [**breeze-cleaner**](breeze-cleaner/) | macOS desktop (Electron) | disk junk, large files, duplicates, privacy traces, unused apps, photo clutter | moves items to the **Trash** — reversible, never a permanent delete |
-| [**breeze-fleet**](breeze-fleet/) | server / agent (Node) | stale **PostgreSQL staging databases** across many hosts | report-only by default; every drop needs an **explicit operator approval**, staging-only |
+| [**breeze-fleet**](breeze-fleet/) | server / agent (Node) | **reclaims space** across many hosts (database cleanup is one checklist item) | report-only by default; every destructive action needs an **explicit operator approval** |
 
 Both are dependency-light (the fleet has **zero** npm dependencies), and both are
 built so the destructive path is the narrow, guarded exception — not the default.
@@ -47,32 +47,35 @@ needs **Full Disk Access** (System Settings → Privacy & Security) to read
 
 ---
 
-## breeze-fleet — staging-database cleanup fleet
+## breeze-fleet — space-reclaiming fleet
 
-Reclaims space from stale Postgres staging databases across a fleet, without ever
-deleting anything on its own.
+**Reclaims space** across a fleet of hosts without ever deleting anything on its
+own. Each way to reclaim space is an opt-in checklist item that's reported first
+and approved before it runs; **database cleanup** (dropping stale staging
+databases) is the item shipped today.
 
 ```
  ┌────────────┐   report inventory    ┌──────────┐   approve (token)   ┌──────────┐
  │   agent    │ ───────────────────▶  │   hub    │ ◀─────────────────  │ operator │
- │ (db host)  │ ◀── approved action ──│ dashboard│                     │ browser  │
- │   psql     │ ──── result ────────▶ │  + store │                     └──────────┘
+ │   (host)   │ ◀── approved action ──│ dashboard│                     │ browser  │
+ │            │ ──── result ────────▶ │  + store │                     └──────────┘
  └────────────┘                       └──────────┘
 ```
 
 **How it works**
-1. An **agent** on each DB host inventories Postgres on an interval and reports
-   cleanup **candidates** (idle staging databases, and space to reclaim).
+1. An **agent** on each host scans on an interval and reports what can be
+   reclaimed (for the database-cleanup item: idle staging databases).
 2. An operator reviews the whole fleet in the **token-protected hub dashboard**
    and **approves** individual cleanups.
 3. The agent executes approved actions — **dry-run by default**, real only when
    the agent runs with `--apply`.
 
-**Safety model** (a drop requires *all* of these, re-checked at execution):
-host is `env: "staging"` · name matches a staging allow pattern and no protect
-pattern · it's a plain identifier · **no live connections** · an operator approved
-*that* database · the approval says `apply` **and** the agent is in `--apply`.
-`postgres`, `template0/1` and `rdsadmin` are always protected.
+**Safety model** — destructive actions are deny-by-default and re-checked on the
+agent at execution. For the database-cleanup item a drop requires *all* of: host
+`env: "staging"` · name matches an allow pattern and no protect pattern · a plain
+identifier · **no live connections** · an operator approved *that* database · the
+approval says `apply` **and** the agent is in `--apply`. `postgres`, `template0/1`
+and `rdsadmin` are always protected.
 
 **Quick start**
 ```bash
@@ -99,7 +102,7 @@ network or VPN, or front it with a reverse proxy that adds your own auth.
 ```
 breeze/
 ├── breeze-cleaner/   macOS Electron disk cleaner (Trash-only)
-└── breeze-fleet/     Postgres staging-DB cleanup fleet (agent + token-protected hub + CLI)
+└── breeze-fleet/     space-reclaiming fleet (agent + token-protected hub + CLI)
 ```
 
 ## Development notes

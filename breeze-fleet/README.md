@@ -1,33 +1,38 @@
 # Breeze Fleet
 
-Fleet-wide cleanup of stale **PostgreSQL staging databases**. Agents run on your
-database hosts, scan on an interval, and **report** cleanup candidates to a
+A report-and-approve fleet for **reclaiming space** across your hosts.
+Lightweight agents scan on an interval and **report** what can be cleaned up to a
 central hub. An operator reviews the fleet in a **token-protected** dashboard and
-**approves** individual cleanups; only then does the agent execute — **dry-run by
-default**, with staging-only guardrails.
+**approves** individual cleanups; only then does an agent execute — **dry-run by
+default**, with scope guardrails.
 
-Nothing is deleted automatically. Every destructive action requires an explicit,
-per-database human approval recorded on the hub.
+Nothing is removed automatically. Every destructive action requires an explicit,
+per-item operator approval recorded on the hub.
 
 ```
  ┌────────────┐   report inventory    ┌──────────┐   approve (token) ┌──────────┐
  │  agent     │ ───────────────────▶  │   hub    │ ◀───────────────  │ operator │
- │ (db host)  │ ◀─── approved action ─│ dashboard│                   │ browser  │
- │  psql      │ ──── result ────────▶ │  + store │                   └──────────┘
+ │   (host)   │ ◀─── approved action ─│ dashboard│                   │ browser  │
+ │            │ ──── result ────────▶ │  + store │                   └──────────┘
  └────────────┘                       └──────────┘
 ```
 
-## What it cleans
+## What it reclaims
 
-- **Drop stale staging databases** — databases whose names match your staging
-  patterns, that have no live connections, and whose transaction counters have
-  not moved for `idleDays`.
-- **Reclaim space** — run `VACUUM (ANALYZE)` on a staging database (non-destructive).
+Reclaiming space is the job. Each way to do it is a checklist item — opt-in,
+reported first and approved before it ever runs:
+
+- **Reclaim in place** — free bloat without removing anything.
+- **Remove stale items** — reclaim everything an idle, unprotected item holds.
+
+More targets plug into the same report → approve → execute flow.
 
 ## Safety model
 
-Dropping a database is irreversible. A drop requires **all** of these, re-checked
-on the agent at execution time (`lib/dbsafety.js`):
+Removing anything is deny-by-default and re-checked on the agent at execution
+time. Database cleanup — one item on the checklist — is the sharpest case:
+dropping a database is irreversible, so a drop requires **all** of these
+(`lib/dbsafety.js`):
 
 1. the host is configured `env: "staging"`;
 2. the database name matches an **allow** pattern and no **protect** pattern, and
@@ -66,7 +71,7 @@ operators open the dashboard at `/?token=<token>`. The hub binds to `127.0.0.1`
 by default — keep it on a trusted network or VPN, or front it with a reverse
 proxy that adds your own authentication.
 
-## Run an agent (on each DB host)
+## Run an agent (on each host)
 
 ```bash
 cp agent.config.example.json agent.config.json   # edit pg + policy + token
@@ -90,7 +95,7 @@ node cli/breeze-fleet.js actions
 
 ## Reclaim space (VACUUM)
 
-Every staging database has a **Vacuum** action in the dashboard (and `approve … vacuum`
+Every staging candidate has a **Vacuum** action in the dashboard (and `approve … vacuum`
 in the CLI). It runs `VACUUM (ANALYZE)` — non-destructive, online — to reclaim bloat.
 Like drop, it previews in dry mode and executes only when the agent runs with `--apply`.
 
